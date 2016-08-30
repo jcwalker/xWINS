@@ -1,4 +1,9 @@
-﻿#netsh.exe wins add partner server=10.0.0.4 type=1
+﻿data LocalizedData
+{
+    ConvertFrom-StringData -StringData @'
+PartnerNotFound=Replication partner: {0} not found.
+'@
+}
 
 function Get-WinsReplicationPartner
 {
@@ -15,7 +20,7 @@ function Get-WinsReplicationPartner
     
     if(!$winsCurrentConfig)
     {
-        throw $($LocalizedData.PartnerNotFound) -f $Partner
+        Write-Verbose -Message $($LocalizedData.PartnerNotFound -f $Partner)
     }
 
     foreach ($index in $winsCurrentConfig)
@@ -76,8 +81,8 @@ function Add-WinsReplicationPartner
     )
     
     $typeconversion = @{
-        Push = 0
-        Pull = 1
+        Pull = 0
+        Push = 1
         PushPull = 2
     }
 
@@ -101,8 +106,8 @@ function Remove-WinsReplicationPartner
     )
     
     $typeconversion = @{
-        Push = 0
-        Pull = 1
+        Pull = 0
+        Push = 1
         PushPull = 2
     }
         
@@ -110,11 +115,11 @@ function Remove-WinsReplicationPartner
 
     if($type)
     {
-      $ArgumentList = "WINS Server 127.0.0.1 Delete partner server=$partner Type=$typeEnum"
+        $ArgumentList = "WINS Server 127.0.0.1 Delete partner server=$partner Type=$typeEnum Confirm=Y"
     }
     else
     {
-        $ArgumentList = "WINS Server 127.0.0.1 Delete partner server=$partner"
+        $ArgumentList = "WINS Server 127.0.0.1 Delete partner server=$partner Confirm=Y"
     }
 
     Invoke-Netsh -ArgumentList $ArgumentList

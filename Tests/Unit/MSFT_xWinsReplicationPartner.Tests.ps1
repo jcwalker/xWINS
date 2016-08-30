@@ -11,11 +11,8 @@
    Future and therefore should not be altered if possible.
 #>
 
-
-# TODO: Customize these parameters...
-$script:DSCModuleName      = 'xWINS' # Example xNetworking
-$script:DSCResourceName    = 'MSFT_xWinsReplicationPartner' # Example MSFT_xFirewall
-# /TODO
+$script:DSCModuleName   = 'xWINS'
+$script:DSCResourceName = 'MSFT_xWinsReplicationPartner'
 
 #region HEADER
 
@@ -35,86 +32,106 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 #endregion HEADER
 
-# TODO: Other Optional Init Code Goes Here...
-
 # Begin Testing
 try
 {
     #region Pester Test Initialization
+    InModuleScope $script:DSCResourceName {
+        $mockGetPartner = @{
+            ServerIP = '10.0.0.4'
+            Partner  = '10.0.0.5'
+            Type     = 'PushPull'
+        }
 
-    # TODO: Optionally create any variables here for use by your tests
-    # See https://github.com/PowerShell/xNetworking/blob/dev/Tests/Unit/MSFT_xDhcpClient.Tests.ps1
+        $mockGetTarget = @{
+            Partner = '10.0.0.5'
+            Ensure    = 'Absent'
+        }
 
-    #endregion Pester Test Initialization
-
-    # TODO: Common DSC Resource describe block structure
-    # The following three Describe blocks are included as a common test pattern.
-    # If a different test pattern would be more suitable, then test describe blocks
-    # may be completely replaced. The goal of this pattern should be to describe 
-    # the potential states a system could be in so that the get/test/set cmdlets
-    # can be tested in those states. Any mocks that relate to that specific state
-    # can be included in the relevant describe block. For a more detailed description
-    # of this approach please review https://github.com/PowerShell/DscResources/issues/143 
-
-    # Add as many of these example 'states' as required to simulate the scenarions that
-    # the DSC resource is designed to work with, below a simple "is in desired state" and
-    # "is not in desired state" are used, but there may be more complex combinations of 
-    # factors, depending on how complex your resource is.
-
-    #region Example state 1
-    Describe 'The system is not in the desired state' {
-        #TODO: Mock cmdlets here that represent the system not being in the desired state
-
-        #TODO: Create a set of parameters to test your get/test/set methods in this state
         $testParameters = @{
-            Property1 = 'value'
-            Property2 = 'value'
+            Partner = '10.0.0.5'
+            Type    = 'PushPull'
+            Ensure  = 'Present'
         }
 
-        #TODO: Update the assertions below to align with the expected results of this state
-        It 'Get method returns something' {
-            Get-TargetResource @testParameters | Should Be 'something'
+        $mockGetTarget4Set = @{
+            Partner = '10.0.0.5'
+            Type    = 'PushPull'
+            Ensure  = 'Present'
         }
+        #endregion Pester Test Initialization
 
-        It 'Test method returns false' {
-            Test-TargetResource @testParameters | Should be $false
+        #region Example state 1
+        Describe 'The system is not in the desired state' {
+            #TODO: Mock cmdlets here that represent the system not being in the desired state
+            Mock Get-WinsReplicationPartner -MockWith { @{Type=$null} }
+            
+            It 'Get method returns Absent' {
+                (Get-TargetResource @testParameters).Ensure | Should Be 'Absent'
+            }
+
+            It 'Test method returns false when expecting Present' {
+                Mock Get-TargetResource -MockWith {$mockGetTarget}
+                Test-TargetResource @testParameters | Should be $false
+            }
+
+            It 'Test method returns false when Type not in desired state' {
+                $mockGetTarget = $mockGetTarget.Clone()
+                $mockGetTarget = $mockGetTarget.Add('Type','Push')
+                Mock Get-TargetResource @testParameters -MockWith {$mockGetTarget}
+                Test-TargetResource @testParameters | Should be $false
+            }
+
+            It 'Test method returns false when Enusre not in desired state' {
+                Mock Get-TargetResource @testParameters -MockWith {$mockGetTarget}
+                Test-TargetResource @testParameters | Should be $false
+            }            
+
+            It 'Set method calls Add when Ensure is Present' {
+                Mock Get-TargetResource -MockWith {$mockGetPartner}
+                Mock Add-WinsReplicationPartner -MockWith {}
+                Set-TargetResource @testParameters
+
+                Assert-MockCalled Add-WinsReplicationPartner -Times 1 -Scope It 
+            }
+
+            It 'Set method calls Remove when Ensure is Absent' {
+                Mock Get-TargetResource -MockWith {$mockGetPartner}
+                Mock Remove-WinsReplicationPartner -MockWith {}
+                Set-TargetResource -Partner 10.0.0.5 -Type Push -Ensure Absent
+
+                Assert-MockCalled Remove-WinsReplicationPartner -Times 1 -Scope It
+            }
+
+            It 'Set method calls Remove and Add when Type not in desired state' {
+                Mock Get-TargetResource -MockWith {$mockGetTarget4Set}
+                Mock Remove-WinsReplicationPartner -MockWith {}
+                Mock Add-WinsReplicationPartner -MockWith {}
+                Set-TargetResource -Partner 10.0.0.5 -Type pull -Ensure Present
+
+                Assert-MockCalled Remove-WinsReplicationPartner -Times 1 -Scope It
+                Assert-MockCalled Add-WinsReplicationPartner    -Times 1 -Scope It
+            }
         }
+        #endregion Example state 1
 
-        It 'Set method calls Demo-CmdletName' {
-            Set-TargetResource @testParameters
+        #region Example state 2
+        Describe 'The system is in the desired state' {
+            $MockGetTarget = $mockGetTarget4Set.Clone()
+            It 'Get method returns Ensure is Present' {
+                Mock Get-WinsReplicationPartner -MockWith { @{Type='Push'} }
+                (Get-TargetResource @testParameters).Ensure | Should Be 'Present'
+            }
 
-            #TODO: Assert that the appropriate cmdlets were called
-            Assert-MockCalled Demo-CmdletName 
-        }
-    }
-    #endregion Example state 1
-
-    #region Example state 2
-    Describe 'The system is in the desired state' {
-        #TODO: Mock cmdlets here that represent the system being in the desired state
-
-        #TODO: Create a set of parameters to test your get/test/set methods in this state
-        $testParameters = @{
-            Property1 = 'value'
-            Property2 = 'value'
-        }
-
-        #TODO: Update the assertions below to align with the expected results of this state
-        It 'Get method returns something' {
-            Get-TargetResource @testParameters | Should Be 'something'
-        }
-
-        It 'Test method returns true' {
-            Test-TargetResource @testParameters | Should be $true
+            It 'Test method returns true' {
+                Mock Get-TargetResource -MockWith {$MockGetTarget}
+                Test-TargetResource @testParameters | Should be $true
+            }
         }
     }
     #endregion Example state 1
 
     #region Non-Exported Function Unit Tests
-
-    # TODO: Pester Tests for any non-exported Helper Cmdlets
-    # If the resource does not contain any non-exported helper cmdlets then
-    # this block may be safetly deleted.
 
     Describe 'Helper function tests' {            
         Import-Module "$PSScriptRoot\..\..\DSCResources\Library\Helper.psm1"
@@ -161,6 +178,4 @@ finally
     Restore-TestEnvironment -TestEnvironment $TestEnvironment
 
     #endregion
-
-    # TODO: Other Optional Cleanup Code Goes Here...
 }
