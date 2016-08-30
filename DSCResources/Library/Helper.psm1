@@ -1,4 +1,4 @@
-﻿data LocalizedData
+data LocalizedData
 {
     ConvertFrom-StringData -StringData @'
 PartnerNotFound=Replication partner: {0} not found.
